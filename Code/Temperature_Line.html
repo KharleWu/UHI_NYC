@@ -11,6 +11,11 @@
             font-family: Arial, sans-serif;
         }
 
+        #chart {
+            width: 90vw;
+            margin: 0 auto;
+        }
+
         .line {
             fill: none;
             stroke-width: 2px;
@@ -69,7 +74,7 @@
             transition: all 0.3s ease;
         }
 
-        .toggle-switch input:checked+.slider {
+        .toggle-switch input:checked + .slider {
             transform: translateX(30px);
         }
 
@@ -92,17 +97,19 @@
             <span>The Difference</span>
         </div>
 
-        <div style="display: flex;">
+        <div style="display: flex; justify-content: center;">
             <div id="chart"></div>
             <div id="legend" style="margin-left: 20px;"></div>
         </div>
 
         <div class="tooltip"></div>
     </div>
+
     <script>
         const margin = { top: 70, right: 10, bottom: 50, left: 50 },
-            width = 1100 - margin.left - margin.right,
-            height = 600 - margin.top - margin.bottom;
+              containerWidth = document.getElementById('chart').clientWidth,
+              width = containerWidth - margin.left - margin.right,
+              height = 600 - margin.top - margin.bottom;
 
         const svg = d3.select("#chart")
             .append("svg")
@@ -167,7 +174,7 @@
 
             yBarAxisG.select(".domain").remove();
 
-            const lineGenerator = (series) => d3.line()
+            const lineGenerator = series => d3.line()
                 .x(d => xScale(d.Month))
                 .y(d => yScale(d[series]));
 
@@ -200,9 +207,7 @@
                         .style("left", (event.pageX + 5) + "px")
                         .style("top", (event.pageY - 28) + "px");
                 })
-                .on("mouseout", () => {
-                    tooltip.style("display", "none");
-                });
+                .on("mouseout", () => tooltip.style("display", "none"));
 
             const diffLine = d3.line()
                 .x(d => xScale(d.Month))
@@ -233,9 +238,7 @@
                         .style("left", (event.pageX + 5) + "px")
                         .style("top", (event.pageY - 28) + "px");
                 })
-                .on("mouseout", () => {
-                    tooltip.style("display", "none");
-                });
+                .on("mouseout", () => tooltip.style("display", "none"));
 
             const legendGroup = svg.append("g")
                 .attr("id", "legend")
