@@ -65,3 +65,6 @@ Pull requests are welcome. For major changes, please open an issue first to disc
 
 ## 🩷 The End
 Thank you for clicking on this repository, hope you find the project helpful.
+
+## Poster
+![UHI_NYC](UHI_NYC.jpg)
