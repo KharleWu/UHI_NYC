@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Bar Chart with Threshold and Gradient Color</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@1.4.0/dist/chartjs-plugin-annotation.min.js"></script>
+  <style>
+    .chart-container {
+      width: 90vw;
+      height: 50vh;
+      margin: 0 auto;
+    }
+  </style>
+</head>
+<body>
+  <div class="chart-container">
+    <canvas id="myBarChart"></canvas>
+  </div>
+
+  <script>
+    const labels = ['Total Population', 'Population Density', 'White', 'Black',
+      'American Indian and Alaska Native', 'Asian',
+      'Native Hawaiian and Other Pacific Islander', 'Some other',
+      'Median Household Income', 'Total Over 25', 'Vehicle Density',
+      'Total Vehicle', 'Over Bachelor', 'Building Density', 'LotCoverageRatio',
+      'Avg YearBuilt', 'LandUse_Commercial',
+      'LandUse_Facility', 'LandUse_Industrial',
+      'LandUse_Residential', 'Avg_NumFloors', 'Total_BuildingVolume',
+      'Park Percent', 'Impervious Percent'];
+
+    const values = [0.1, -0.24, -0.09, 0.21, 0.03, 0.02, 0.02, 0.05, -0.02, 0.04, 0.15,
+      0.24, -0.2, -0.32, -0.13, 0.12, -0.06, -0.19, 0.08, 0.19, -0.29, -0.12, -0.26, 0.07];
+
+    const maxAbsValue = Math.max(...values.map(v => Math.abs(v)));
+
+    const data = {
+      labels: labels,
+      datasets: [{
+        label: 'Correlations With Temperature',
+        data: values,
+        backgroundColor: function (context) {
+          const v = context.raw;
+          const opacity = Math.abs(v) / 0.1;
+          return v >= 0
+            ? `rgba(180, 3, 38, ${opacity})` // red
+            : `rgba(93, 124, 230, ${opacity})`; // blue
+        },
+        borderWidth: 1,
+        borderColor: 'rgba(0,0,0,0.1)'
+      }]
+    };
+
+    const config = {
+      type: 'bar',
+      data: data,
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          tooltip: {
+            callbacks: {
+              label: (ctx) => `Value: ${ctx.raw}`
+            }
+          },
+          datalabels: {
+            anchor: 'end',
+            align: 'end',
+            formatter: value => value.toFixed(2),
+            color: '#000',
+            font: { weight: 'bold' }
+          },
+          annotation: {
+            annotations: {
+              line1: {
+                type: 'line',
+                yMin: 0.1,
+                yMax: 0.1,
+                borderColor: 'rgba(0,0,0,0.6)',
+                borderWidth: 1,
+                borderDash: [6, 6],
+                label: {
+                  enabled: true,
+                  content: 'y = 0.1',
+                  position: 'start',
+                  backgroundColor: 'rgba(0,0,0,0.1)',
+                  font: { style: 'italic' }
+                }
+              },
+              line2: {
+                type: 'line',
+                yMin: -0.1,
+                yMax: -0.1,
+                borderColor: 'rgba(0,0,0,0.6)',
+                borderWidth: 1,
+                borderDash: [6, 6],
+                label: {
+                  enabled: true,
+                  content: 'y = -0.1',
+                  position: 'start',
+                  backgroundColor: 'rgba(0,0,0,0.1)',
+                  font: { style: 'italic' }
+                }
+              }
+            }
+          }
+        },
+        scales: {
+          x: {
+            ticks: {
+              color: '#000',
+              font: { weight: 'bold' },
+              maxRotation: 60,
+              minRotation: 45,
+              autoSkip: false
+            },
+            grid: {
+              display: false,
+              drawBorder: false,
+              drawTicks: false
+            }
+          },
+          y: {
+            beginAtZero: true,
+            grid: {
+              drawTicks: false,
+              drawBorder: false,
+              color: (context) => context.tick.value === 0 ? '#000' : 'transparent',
+              lineWidth: (context) => context.tick.value === 0 ? 2 : 0
+            },
+            border: {
+              display: false
+            },
+            ticks: {
+              display: false
+            }
+          }
+        }
+      },
+      plugins: [ChartDataLabels]
+    };
+
+    Chart.register(ChartDataLabels);
+    Chart.register(window['chartjs-plugin-annotation']);
+    new Chart(document.getElementById('myBarChart'), config);
+  </script>
+
+</body>
+</html>

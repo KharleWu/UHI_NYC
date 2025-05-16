@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Multi-Line Chart with Toggle</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+
+        #chart {
+            width: 90vw;
+            margin: 0 auto;
+        }
+
+        .line {
+            fill: none;
+            stroke-width: 2px;
+            transition: opacity 0.3s, stroke-width 0.3s;
+        }
+
+        .tooltip {
+            position: absolute;
+            background: white;
+            border: 1px solid #ddd;
+            padding: 5px;
+            display: none;
+            font-size: 12px;
+            pointer-events: none;
+        }
+
+        .grid line {
+            stroke: lightgray;
+            stroke-dasharray: 3;
+        }
+
+        .grid .domain {
+            stroke: none;
+        }
+
+        .toggle-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            margin: 0 auto 10px auto;
+            width: fit-content;
+        }
+
+        .toggle-switch {
+            position: relative;
+            width: 60px;
+            height: 30px;
+            background-color: #ccc;
+            border-radius: 30px;
+            cursor: pointer;
+        }
+
+        .toggle-switch input {
+            display: none;
+        }
+
+        .slider {
+            position: absolute;
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            background: white;
+            top: 2px;
+            left: 2px;
+            transition: all 0.3s ease;
+        }
+
+        .toggle-switch input:checked + .slider {
+            transform: translateX(30px);
+        }
+
+        .legend rect {
+            fill: white;
+            stroke: black;
+            opacity: 0.8;
+        }
+    </style>
+</head>
+
+<body>
+    <div>
+        <div class="toggle-container">
+            <span>The Temperature</span>
+            <label class="toggle-switch">
+                <input type="checkbox" id="toggleView">
+                <span class="slider"></span>
+            </label>
+            <span>The Difference</span>
+        </div>
+
+        <div style="display: flex; justify-content: center;">
+            <div id="chart"></div>
+            <div id="legend" style="margin-left: 20px;"></div>
+        </div>
+
+        <div class="tooltip"></div>
+    </div>
+
+    <script>
+        const margin = { top: 70, right: 10, bottom: 50, left: 50 },
+              containerWidth = document.getElementById('chart').clientWidth,
+              width = containerWidth - margin.left - margin.right,
+              height = 600 - margin.top - margin.bottom;
+
+        const svg = d3.select("#chart")
+            .append("svg")
+            .attr("width", width + margin.left + margin.right)
+            .attr("height", height + margin.top + margin.bottom)
+            .append("g")
+            .attr("transform", `translate(${margin.left},${margin.top})`);
+
+        const tooltip = d3.select(".tooltip");
+
+        d3.csv("https://raw.githubusercontent.com/KharleWu/UHI_NYC/refs/heads/main/NWS_Temperature/Avg_Temperature_Final.csv").then(data => {
+            data.forEach(d => {
+                d.CentralPark = +d.CentralPark;
+                d.WhitePlains = +d.WhitePlains;
+                d.Diff = d.CentralPark - d.WhitePlains;
+            });
+
+            const xScale = d3.scalePoint()
+                .domain(data.map(d => d.Month))
+                .range([0, width]);
+
+            const yScale = d3.scaleLinear()
+                .domain([
+                    d3.min(data, d => Math.min(d.CentralPark, d.WhitePlains)),
+                    d3.max(data, d => Math.max(d.CentralPark, d.WhitePlains))
+                ])
+                .range([height, 0]);
+
+            const yBarScale = d3.scaleLinear()
+                .domain([0, d3.max(data, d => d.Diff)])
+                .range([height, 0]);
+
+            const xAxis = d3.axisBottom(xScale).tickValues(
+                data.map((d, i) => (i % 12 === 0 ? d.Month : null)).filter(d => d)
+            );
+
+            const yGrid = d3.axisLeft(yScale).tickSize(-width).tickFormat("");
+
+            svg.append("g")
+                .attr("transform", `translate(0,${height})`)
+                .attr("class", "x-axis")
+                .call(xAxis);
+
+            svg.append("g")
+                .attr("class", "grid")
+                .call(yGrid);
+
+            const yAxis = d3.axisLeft(yScale).ticks(6);
+
+            svg.append("g")
+                .attr("class", "y-axis")
+                .call(yAxis)
+                .select(".domain")
+                .remove();
+
+            const yAxisBar = d3.axisLeft(yBarScale).ticks(5).tickSize(0).tickPadding(10);
+
+            const yBarAxisG = svg.append("g")
+                .attr("class", "y-axis-bar")
+                .style("display", "none")
+                .call(yAxisBar);
+
+            yBarAxisG.select(".domain").remove();
+
+            const lineGenerator = series => d3.line()
+                .x(d => xScale(d.Month))
+                .y(d => yScale(d[series]));
+
+            const colors = { CentralPark: "steelblue", WhitePlains: "tomato" };
+
+            const lines = Object.keys(colors).map(series =>
+                svg.append("path")
+                    .datum(data)
+                    .attr("class", `line ${series}`)
+                    .attr("d", lineGenerator(series))
+                    .attr("stroke", colors[series])
+                    .attr("opacity", 0.7)
+            );
+
+            const circles = svg.selectAll("circle")
+                .data(data.flatMap(d => [
+                    { month: d.Month, value: d.CentralPark, series: 'CentralPark' },
+                    { month: d.Month, value: d.WhitePlains, series: 'WhitePlains' }
+                ]))
+                .enter().append("circle")
+                .attr("cx", d => xScale(d.month))
+                .attr("cy", d => yScale(d.value))
+                .attr("r", 3.5)
+                .attr("fill", d => d.series === 'CentralPark' ? "steelblue" : "tomato");
+
+            svg.selectAll("circle")
+                .on("mouseover", (event, d) => {
+                    tooltip.style("display", "block")
+                        .html(`Month: ${d.month}<br>Value: ${d.value}`)
+                        .style("left", (event.pageX + 5) + "px")
+                        .style("top", (event.pageY - 28) + "px");
+                })
+                .on("mouseout", () => tooltip.style("display", "none"));
+
+            const diffLine = d3.line()
+                .x(d => xScale(d.Month))
+                .y(d => yBarScale(d.Diff));
+
+            const diffPath = svg.append("path")
+                .datum(data)
+                .attr("class", "line diff-line")
+                .attr("d", diffLine)
+                .attr("stroke", "#BBBAC6")
+                .attr("fill", "none")
+                .attr("stroke-width", 2)
+                .style("display", "none");
+
+            const diffCircles = svg.selectAll(".diff-circle")
+                .data(data)
+                .enter()
+                .append("circle")
+                .attr("class", "diff-circle")
+                .attr("cx", d => xScale(d.Month))
+                .attr("cy", d => yBarScale(d.Diff))
+                .attr("r", 3.5)
+                .attr("fill", "#BBBAC6")
+                .style("display", "none")
+                .on("mouseover", (event, d) => {
+                    tooltip.style("display", "block")
+                        .html(`Month: ${d.Month}<br>Diff: ${d.Diff.toFixed(2)}`)
+                        .style("left", (event.pageX + 5) + "px")
+                        .style("top", (event.pageY - 28) + "px");
+                })
+                .on("mouseout", () => tooltip.style("display", "none"));
+
+            const legendGroup = svg.append("g")
+                .attr("id", "legend")
+                .attr("transform", `translate(${width / 2 - 50}, -40)`);
+
+            Object.entries(colors).forEach(([key, color], index) => {
+                const legendItem = legendGroup.append("g")
+                    .attr("transform", `translate(${index * 100}, 0)`);
+
+                legendItem.append("rect")
+                    .attr("width", 15)
+                    .attr("height", 15)
+                    .attr("fill", color);
+
+                legendItem.append("text")
+                    .attr("x", 20)
+                    .attr("y", 12)
+                    .attr("font-size", "14px")
+                    .text(key);
+            });
+
+            const diffAvg = d3.mean(data, d => d.Diff);
+
+            const avgLine = svg.append("line")
+                .attr("class", "diff-avg-line")
+                .attr("x1", 0)
+                .attr("x2", width)
+                .attr("y1", yBarScale(diffAvg))
+                .attr("y2", yBarScale(diffAvg))
+                .attr("stroke", "#FCB900")
+                .attr("stroke-dasharray", "6,2")
+                .attr("stroke-width", 4)
+                .style("display", "none");
+
+            const avgLabel = svg.append("text")
+                .attr("class", "diff-avg-label")
+                .attr("x", width - 130)
+                .attr("y", yBarScale(diffAvg) - 10)
+                .attr("fill", "#FCB900")
+                .attr("font-size", "15px")
+                .attr("font-weight", 'bold')
+                .text(`The average is ${diffAvg.toFixed(2)}`)
+                .style("display", "none");
+
+            d3.select("#toggleView").on("change", function () {
+                const showDiff = this.checked;
+                lines.forEach(l => l.style("display", showDiff ? "none" : null));
+                circles.style("display", showDiff ? "none" : null);
+                svg.select(".y-axis").style("display", showDiff ? "none" : null);
+                yBarAxisG.style("display", showDiff ? null : "none");
+                diffPath.style("display", showDiff ? null : "none");
+                diffCircles.style("display", showDiff ? null : "none");
+                d3.select("#legend").style("display", showDiff ? "none" : null);
+                avgLine.style("display", showDiff ? null : "none");
+                avgLabel.style("display", showDiff ? null : "none");
+            });
+        });
+    </script>
+</body>
+
+</html>

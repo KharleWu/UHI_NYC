@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Scree Plot with Chart.js</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@1.4.0"></script>
+  <style>
+    #scree-chart-wrapper {
+      width: 70vw;
+      margin: 0 auto;
+    }
+    canvas {
+      max-width: 100%;
+    }
+  </style>
+</head>
+<body>
+
+<div id="scree-chart-wrapper">
+  <canvas id="screeChart"></canvas>
+</div>
+
+<script>
+  const individualVariance = [0.226, 0.156, 0.127, 0.086, 0.081, 0.076, 0.056, 0.054, 0.039, 0.032, 0.027, 0.015, 0.012, 0.01];
+  const cumulativeVariance = individualVariance.reduce((acc, cur, i) => {
+    acc.push((acc[i - 1] || 0) + cur);
+    return acc;
+  }, []);
+
+  const screenlabels = individualVariance.map((_, i) => `PC${i + 1}`);
+
+  const ctx = document.getElementById('screeChart').getContext('2d');
+
+  const screeChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: screenlabels,
+      datasets: [
+        {
+          label: 'Individual Variance',
+          data: individualVariance,
+          backgroundColor: '#69b3a2',
+          yAxisID: 'y',
+        },
+        {
+          label: 'Cumulative Variance',
+          data: cumulativeVariance,
+          type: 'line',
+          borderColor: 'steelblue',
+          backgroundColor: 'steelblue',
+          borderWidth: 2,
+          tension: 0.4,
+          yAxisID: 'y',
+          pointRadius: 5,
+          pointHoverRadius: 6
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        title: {
+          display: true,
+          text: 'Scree Plot: Individual vs Cumulative Variance'
+        },
+        tooltip: {
+          mode: 'index',
+          intersect: false,
+          callbacks: {
+            label: function(context) {
+              return `${context.dataset.label}: ${context.raw.toFixed(3)}`;
+            }
+          }
+        },
+        legend: {
+          position: 'top'
+        },
+        annotation: {
+          annotations: {
+            thresholdLine: {
+              type: 'line',
+              yMin: 0.8,
+              yMax: 0.8,
+              borderColor: 'red',
+              borderWidth: 2,
+              borderDash: [6, 4],
+              label: {
+                content: '80% threshold',
+                enabled: true,
+                position: 'end',
+                backgroundColor: 'rgba(255,255,255,0.7)',
+                color: 'red',
+                font: {
+                  style: 'italic'
+                }
+              }
+            }
+          }
+        }
+      },
+      interaction: {
+        mode: 'nearest',
+        axis: 'x',
+        intersect: false
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          max: 1.0,
+          title: {
+            display: true,
+            text: 'Variance'
+          }
+        }
+      }
+    }
+  });
+</script>
+
+</body>
+</html>
