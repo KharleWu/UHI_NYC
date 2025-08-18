@@ -120,7 +120,7 @@
 
         const tooltip = d3.select(".tooltip");
 
-        d3.csv("https://cdn.jsdelivr.net/gh/KharleWu/UHI_NYC/NWS_Temperature/Avg_Temperature_Final.csv").then(data => {
+        d3.csv("https://raw.githubusercontent.com/KharleWu/UHI_NYC/refs/heads/main/NWS_Temperature/Avg_Temperature_Final.csv").then(data => {
             data.forEach(d => {
                 d.CentralPark = +d.CentralPark;
                 d.WhitePlains = +d.WhitePlains;
